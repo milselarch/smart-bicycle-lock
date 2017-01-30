@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="schemas.android.com/tools"
+    tools:context="com.milselarch.mappapp"
+    xmlns:yourapp="http://schemas.android.com/apk/res-auto"
+    >
+    <item
+        android:id="@+id/action_refresh"
+        android:orderInCategory="100"
+        yourapp:showAsAction="ifRoom"
+        android:icon="@drawable/replay_black"
+        android:title="Refresh"/>
+
+    <!-- android:showAsAction="always" -->
+
+</menu>
