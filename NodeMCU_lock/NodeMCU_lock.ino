@@ -2,7 +2,7 @@
 #define RX 3
 #define TX 1
 
-SoftwareSerial BT(D9, D10);
+SoftwareSerial BT(D7, D8);
 // creates a "virtual" serial port/UART
 // connect BT module TX to D13
 // connect BT module RX to D15
@@ -36,7 +36,7 @@ void loop() {
 		} else if (a=='?') {
 			BT.println("Send '1' to turn LED on");
 			BT.println("Send '2' to turn LED on");
-		}   
+		}
 		// you can add more "if" statements with other characters to add more commands
 	}
 }
