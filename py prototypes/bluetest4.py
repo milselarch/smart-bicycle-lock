@@ -1,5 +1,6 @@
 import bluetooth
 from bluetooth import *
+import time
 
 print("performing inquiry...")
 
@@ -15,43 +16,52 @@ def package(data):
      assert len(body) + len(header) < 254
 
      new = [len(header)+len(body)+1,len(header)]
-     new += bytes(header.encode('ascii'))
-     new += bytes(body.encode('ascii'))
-     print('packet sent:',bytes(new))
-     return(bytes(new))
+     new += header.encode('ascii')
+     new += body.encode('ascii')
+     new = b''.join([bytes(char) for char in new])
+     
+     print('packet sent: ')
+     print(new)
+     return(new)
 
 s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 
+#connect('20:15:05:06:63:33')
 def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
      global s
      s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
      s.connect((serverMACAddress, port))
-     s.settimeout(1.5)
+     #s.settimeout(1.5)
+     s.setblocking(False)
      counter = 0
+
+     time.sleep(1)
     
      while 1:
           print('count no [%s]'%counter)
-
-          isEmpty = False
           data = b''
+
+          time.sleep(1);
           
-          while isEmpty == False:
+          while True:
                try:
                     data += s.recv(1);
-                    print('SUB', data)
                     if len(data) > data[0]:
                          print('PACKET',data)
                          data = b''
 
-               except OSError:
-                    isEmpty = True
-                    print('no data')
+               except (OSError, IOError) as e:
+                    print(e)
+                    break
 
-          if data != b'':
-               print('FINAL DATA',data)
+          if data != b'': print('FINAL DATA: ' + data)
+          else: print('no data')
 
-          text = input() # Note change to the old (Python 2) raw_input
-        
+          try:
+               text = raw_input()
+               # Note change to the old (Python 2) raw_input
+          except NameError:
+               text = input()
 
           if text == "quit": break
           elif text[:5] == 'pass:':
@@ -62,7 +72,7 @@ def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
                
           else:
                s.send(package(text))
-            
+
           counter += 1
             
      s.close()
