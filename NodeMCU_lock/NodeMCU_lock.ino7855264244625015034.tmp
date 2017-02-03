@@ -120,54 +120,23 @@ public:
     void sendPacketAuto(const unsigned char *header, String body) {
         Serial.println("START HEADC SBODY AUTOSEND");
         const char *cbody = body.c_str();
-        this->sendUcharPacketAuto((char*) header, (char*) cbody);
+        this->sendPacketAuto(header, cbody);
     }
     void sendPacketAuto(String header, const unsigned char *body) {
         Serial.println("AA");
         const char *cheader = header.c_str();
-        this->sendUcharPacketAuto((char *) cheader, (char*) body);
+        this->sendUCharPacketAuto(cheader, body);
     }
     void sendPacketAuto(String header, String body) {
         Serial.println("START HEADS SBODY AUTOSEND");
         const char *cheader = header.c_str();
         const char *cbody = body.c_str();
-        this->sendUcharPacketAuto(cheader, cbody);
+        this->sendPacketAuto(cheader, cbody);
     }
 
-    void sendUcharPacketAuto(
+    void sendPacketAuto(
         const unsigned char *header,
         const unsigned char *body
-        ) {
-
-        unsigned char headerLength = 0;
-        unsigned char bodyLength = 0;
-
-        Serial.println("PRE-LOOP");
-
-        for (int i = 0; header[i] != 0; i++) { headerLength++; }
-        for (int i = 0; body[i] != 0; i++) { bodyLength++; }
-
-        Serial.print("HEADERLEN ");
-        Serial.println(headerLength);
-        Serial.print("BODYLEN ");
-        Serial.println(bodyLength);
-
-        const unsigned char totalLength = headerLength + bodyLength + 1;
-        this->writeChar(totalLength);
-        this->writeChar(headerLength);
-
-        for (int i = 0; i < headerLength; i++) {
-            this->writeChar(header[i]);
-        }
-
-        for (int i = 0; i < bodyLength; i++) {
-            this->writeChar(body[i]);
-        }
-    }
-
-    void sendUcharPacketAuto(
-        const char *header,
-        const char *body
         ) {
 
         unsigned char headerLength = 0;

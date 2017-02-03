@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include <EEPROM.h>
 
 // creates a "virtual" serial port/UART
 // connect BT module TX to D13
@@ -54,7 +55,6 @@ public:
         */
         Serial.write(character);
         BT.write(character);
-        BT.flush();
     }
     
     void resetTimer() {
@@ -90,7 +90,7 @@ public:
         this->sendPacket(header.c_str(), body, headerLength, bodyLength);
     }
     void sendPacket(
-        String header, String body,
+        String header, String *body,
         const unsigned short headerLength,
         const unsigned short bodyLength
         ) {
@@ -118,23 +118,16 @@ public:
     }
 
     void sendPacketAuto(const unsigned char *header, String body) {
-        Serial.println("START HEADC SBODY AUTOSEND");
-        const char *cbody = body.c_str();
-        this->sendUcharPacketAuto((char*) header, (char*) cbody);
+        this->sendPacketAuto(header, body.c_str());
     }
     void sendPacketAuto(String header, const unsigned char *body) {
-        Serial.println("AA");
-        const char *cheader = header.c_str();
-        this->sendUcharPacketAuto((char *) cheader, (char*) body);
+        this->sendPacketAuto(header->c_str(), body);
     }
-    void sendPacketAuto(String header, String body) {
-        Serial.println("START HEADS SBODY AUTOSEND");
-        const char *cheader = header.c_str();
-        const char *cbody = body.c_str();
-        this->sendUcharPacketAuto(cheader, cbody);
+    void sendPacketAuto(String header, String *body) {
+        this->sendPacketAuto(header->c_str(), body->c_str());
     }
 
-    void sendUcharPacketAuto(
+    void sendPacketAuto(
         const unsigned char *header,
         const unsigned char *body
         ) {
@@ -142,77 +135,8 @@ public:
         unsigned char headerLength = 0;
         unsigned char bodyLength = 0;
 
-        Serial.println("PRE-LOOP");
-
         for (int i = 0; header[i] != 0; i++) { headerLength++; }
         for (int i = 0; body[i] != 0; i++) { bodyLength++; }
-
-        Serial.print("HEADERLEN ");
-        Serial.println(headerLength);
-        Serial.print("BODYLEN ");
-        Serial.println(bodyLength);
-
-        const unsigned char totalLength = headerLength + bodyLength + 1;
-        this->writeChar(totalLength);
-        this->writeChar(headerLength);
-
-        for (int i = 0; i < headerLength; i++) {
-            this->writeChar(header[i]);
-        }
-
-        for (int i = 0; i < bodyLength; i++) {
-            this->writeChar(body[i]);
-        }
-    }
-
-    void sendUcharPacketAuto(
-        const char *header,
-        const char *body
-        ) {
-
-        unsigned char headerLength = 0;
-        unsigned char bodyLength = 0;
-
-        Serial.println("PRE-LOOP");
-
-        for (int i = 0; header[i] != 0; i++) { headerLength++; }
-        for (int i = 0; body[i] != 0; i++) { bodyLength++; }
-
-        Serial.print("HEADERLEN ");
-        Serial.println(headerLength);
-        Serial.print("BODYLEN ");
-        Serial.println(bodyLength);
-
-        const unsigned char totalLength = headerLength + bodyLength + 1;
-        this->writeChar(totalLength);
-        this->writeChar(headerLength);
-
-        for (int i = 0; i < headerLength; i++) {
-            this->writeChar(header[i]);
-        }
-
-        for (int i = 0; i < bodyLength; i++) {
-            this->writeChar(body[i]);
-        }
-    }
-
-    void sendPacketAuto(
-        const char *header,
-        const char *body
-        ) {
-
-        unsigned char headerLength = 0;
-        unsigned char bodyLength = 0;
-
-        Serial.println("PRE-LOOP");
-
-        for (int i = 0; header[i] != 0; i++) { headerLength++; }
-        for (int i = 0; body[i] != 0; i++) { bodyLength++; }
-
-        Serial.print("HEADERLEN ");
-        Serial.println(headerLength);
-        Serial.print("BODYLEN ");
-        Serial.println(bodyLength);
 
         const unsigned char totalLength = headerLength + bodyLength + 1;
         this->writeChar(totalLength);
@@ -290,7 +214,7 @@ public:
                 this->resetTimer();
                 this->startTimer();
 
-                recvPacket[0] = BT.read();
+                recvPacket[0] = int(BT.read());
                 Serial.println(String(char(recvPacket[recvIndex])));
 
                 recvIndex = 1;
@@ -307,14 +231,13 @@ public:
                 Serial.write(recvPacket[0]);
                 Serial.println(recvPacket[0]);
                 
-                if (recvIndex > recvPacket[0]) {
+                if (recvIndex > int(recvPacket[0])) {
                     headerLength = acqPacketHeader(header);
                     bodyLength = acqPacketBody(body);
                     wipeRecvPacket();
 
                     pauseTimer();
                     RECV_STATUS = 2;
-                    Serial.print("RECV_COMPLETE");
                 
                 } else {
                     resetTimer();
@@ -326,7 +249,6 @@ public:
     void resetRecv() {
         if (RECV_STATUS == 2) {
             RECV_STATUS = 0;
-            Serial.println("RESET RECV STATUS");
             resetTimer();
         }    
     }
@@ -381,9 +303,9 @@ int cmp(unsigned char input[], String check) {
     return cmp(input, check.c_str());
 }
 
-unsigned char password[8];
+char password[8];
 
-void readEEPROM(unsigned char *data) {
+void readEEPROM(char *data) {
     data = password;
 }
 
@@ -462,19 +384,17 @@ void changePassword(unsigned char *currentPassword, unsigned char *newPassword) 
         readEEPROM(password);        
                 
         //writeEEPROM(newPassword);
-        BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS","1");
+        sendPacketAuto("CHANGE_PASSWORD_STATUS","1");
         //sendPacketAuto("CHANGE_PASSWORD_SET",newPassword);
         //sendPacketAuto("NOW_PASSWORD",password);
         
     } else {
-        BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS","0");
+        sendPacketAuto("CHANGE_PASSWORD_STATUS","0");
         //sendPacketAuto("PASSWORD_NOW",password);
         //sendPacketAuto("PASSWORD_SENT",currentPassword);
         //sendPacket("PASSCHAR_FAIL",&i,13,1);
     }
 }
-
-unsigned short LOCKED = 0;
 
 void loop() {
     BTClient.cheak();
@@ -506,18 +426,18 @@ void loop() {
             BTClient.sendPacketAuto("CONFIG_LENGTH", bLengthArray);
             
             for (int i = 0; i < BTClient.acqBodyLength(); i++) {
-                BTClient.writeChar(BTClient.acqBody()[i]);
+                BTClient.writeChar(acqBody()[i]);
             }
 
             //UART_Write_Text("\r\n");
             //sendPacketAuto("COMMAND", acqBody());
             
         } else if (cmp(BTClient.acqHeader(), "UNLOCK") == 0) {
-            unsigned char password[8];
+            char password[8];
             readEEPROM(password);
                     
             if (cmpEEPROM(BTClient.acqBody(), password) == 0) {
-                delay(100);
+                delay_ms(100);
                 Serial.println("UNLOCK");
                 //PORTAbits.RA0 = 1;
                 /*
@@ -532,11 +452,11 @@ void loop() {
             }
             
         } else if (cmp(BTClient.acqHeader(), "LOCK") == 0) {
-            unsigned char password[8];
+            char password[8];
             readEEPROM(password);
                     
-            if (cmpEEPROM(BTClient.acqBody(), password) == 0) {
-                delay(100);
+            if (cmpEEPROM(acqBody(), password) == 0) {
+                delay_ms(100);
 
                 /*
                 //PORTAbits.RA0 = 1;
@@ -558,10 +478,10 @@ void loop() {
             }
             
         } else if (cmp(BTClient.acqHeader(), "CHANGE_PASSWORD") == 0) {
-            changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
+            changePassword(acqBody(), acqBody()+8);
                 
-        } else if (cmp(BTClient.acqHeader(), "EE") == 0) {
-            unsigned char password[8];
+        } else if (cmp(acqHeader(), "EE") == 0) {
+            char password[8];
             readEEPROM(password);
             BTClient.sendPacket("current password: ",password,18,8);
             
@@ -580,9 +500,9 @@ void loop() {
             for (int i=0; i<8; i++) {blank[i] = 0;}
             writeEEPROM(blank);
             
-            unsigned char password[8];
+            char password[8];
             readEEPROM(password);
-            BTClient.sendPacket("reset password: ",password,16,8);
+            sendPacket("reset password: ",password,16,8);
         
         } else if (cmp(BTClient.acqHeader(), "LIGHT") == 0) {
             //light = !light;
@@ -593,18 +513,13 @@ void loop() {
             //PORTDbits.RD5 = 1;
             BTClient.sendPacketAuto("BUZZED","1");
             
-        } else if (cmp(BTClient.acqHeader(), "UNBUZZ") == 0) {
+        } else if (cmp(acqHeader(), "UNBUZZ") == 0) {
             //PORTDbits.RD5 = 0;
             BTClient.sendPacketAuto("UNBUZZED","1");
             
         } else {
-            Serial.println("WRONG_DATA");
-            Serial.print((char*) BTClient.acqHeader());
-            Serial.println("POST HEADER ACQ");
-            BTClient.sendPacketAuto("WRONG HEADER ", BTClient.acqHeader());
-            Serial.print("WRONG HEAD SEND DONE");
-            BTClient.sendPacketAuto("WRONG BODY ", BTClient.acqBody());
-            Serial.print("WRONG BODY SEND DONE");
+            BTClient.sendPacketAuto("WRONG HEADER ", acqHeader());
+            BTClient.sendPacketAuto("WRONG BODY ", acqBody());
         }
         
         /*
@@ -613,9 +528,8 @@ void loop() {
             ,acqHeaderLength(),acqBodyLength()
             );
         */
-
-        Serial.print("RESET RECV");
-        BTClient.resetRecv();
+        
+        resetRecv();
     }
     
     delay(50);

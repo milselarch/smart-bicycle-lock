@@ -120,12 +120,12 @@ public:
     void sendPacketAuto(const unsigned char *header, String body) {
         Serial.println("START HEADC SBODY AUTOSEND");
         const char *cbody = body.c_str();
-        this->sendUcharPacketAuto((char*) header, (char*) cbody);
+        this->sendUcharPacketAuto(header, cbody);
     }
     void sendPacketAuto(String header, const unsigned char *body) {
         Serial.println("AA");
         const char *cheader = header.c_str();
-        this->sendUcharPacketAuto((char *) cheader, (char*) body);
+        this->sendUcharPacketAuto(cheader, body);
     }
     void sendPacketAuto(String header, String body) {
         Serial.println("START HEADS SBODY AUTOSEND");
