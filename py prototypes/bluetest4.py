@@ -45,16 +45,19 @@ def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
           
           while True:
                try:
-                    data += s.recv(1);
+                    data += s.recv(1)
+
+                    #print("CHAR", char)
                     if len(data) > data[0]:
-                         print('PACKET',data)
+                         print('PACKET', data)
                          data = b''
 
                except (OSError, IOError) as e:
                     print(e)
                     break
 
-          if data != b'': print('FINAL DATA: ' + data)
+          if data != b'':
+               print('FINAL DATA: ', data)
           else: print('no data')
 
           try:
