@@ -291,7 +291,12 @@ public class MainActivity extends AppCompatActivityApi6 {
 
             } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                Log.d("ADD_DEVICE:", device.getName());
+
+                try {
+                    Log.d("ADD_DEVICE:", device.getName());
+                } catch (Exception e) {
+                    Log.e("DEVICE_BT_NAME", "exception", e);
+                }
 
                 Toast.makeText(getApplicationContext(), "Found device " + device.getName(), Toast.LENGTH_SHORT).show();
                 //mDeviceList.add(device);

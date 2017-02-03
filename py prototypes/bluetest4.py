@@ -21,8 +21,7 @@ def package(data):
      #new = [bytes(char) for char in new]
      new = b''.join(new)
      
-     print('packet sent: ')
-     print(new)
+     print('packet sent: ', new)
      return(new)
 
 s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)

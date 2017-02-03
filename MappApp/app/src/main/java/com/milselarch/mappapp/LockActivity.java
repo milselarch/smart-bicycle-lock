@@ -28,7 +28,7 @@ import java.util.Arrays;
 public class LockActivity extends Activity {
     public BluetoothDevice activeDevice;
     public BluetoothSocket socket;
-    Handler onPacketRecieve;
+    //Handler onPacketRecieve;
     PotatoThread btThread;
 
     private int STATUS_OFF = 0;
@@ -56,11 +56,13 @@ public class LockActivity extends Activity {
 
     private String defaultPassword = "";
     public static final String MY_PREFS_NAME = "MyPrefs";
-    SharedPreferences sharedPref = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
+    SharedPreferences sharedPref;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
+
+        sharedPref = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
 
         activeDevice = getIntent().getExtras().getParcelable("btdevice");
         LockNameText = (TextView) findViewById(R.id.device_name);
@@ -85,211 +87,206 @@ public class LockActivity extends Activity {
 
         socket = ((MyApplication) getApplication()).getBtSock();
 
-        onPacketRecieve = new Handler() {
-            public void handleMessage(Message mssg) {
-                String header = ((PotatoThread.Packet) mssg.obj).header;
-                String body = ((PotatoThread.Packet) mssg.obj).body;
-
-                if (header == null) {
-                    //onDestroy();
-                    displayToast("connection disconneted");
-                    //finish();
-                    (new Handler()).postDelayed(new Runnable() {
-                        @Override
-                        public void run() {finish(); /*Do something after 100ms*/ }
-                    }, 1000);
-
-                } else if (header.equals("STATUS_RETURN")) {
-                    switch ((int) body.charAt(0)) {
-                        case 1:
-                            unlockLockBttn();
-                            break;
-                        case 2:
-                            lockLockBttn();
-                            break;
-                        default:
-                            Log.d("ERRRRRRORRRRRRR STATUS",Integer.toString((int) body.charAt(0)));
-                    }
-
-                } else if (header.equals("unlocked")) {
-                    unlockLockBttn();
-                } else if (header.equals("locked")) {
-                    lockLockBttn();
-
-                } else if (header.equals("UNLOCK_FAIL")) {
-                    revertLockStatus();
-                    displayToast("Wrong password - cannot unlock");
-
-                } else if (header.equals("LOCK_FAIL")) {
-                    revertLockStatus();
-                    displayToast("Wrong password - cannot lock");
-
-                } else if (header.equals("BUZZED")) {
-                    isBuzzing = STATUS_ON;
-                    soundBttn.setBackgroundResource(R.drawable.bluetooth_searching_black);
-                } else if (header.equals("UNBUZZED")) {
-                    isBuzzing = STATUS_OFF;
-                    soundBttn.setBackgroundResource(R.drawable.bluetooth_disabled_black);
-
-                } else if (header.equals("CHANGE_PASSWORD_STATUS")) {
-                    if (body.equals("1")) {
-                        isAuthenticate = STATUS_OFF;
-                        modPasswordBttn.setBackgroundResource(R.drawable.input_black);
-                        displayToast("password changed!");
-                    } else {
-                        isAuthenticate = STATUS_OFF;
-                        modPasswordBttn.setBackgroundResource(R.drawable.input_black);
-                        displayToast("Wrong password entered");
-                    }
-
-                } else {
-                    Log.d("WRONG_HEADER",header);
-                    displayToast("WRONG_HEADER: ["+header+"]");
-                }
-
-                //Log.d("THREAD MESSAGE HEAD", header);
-                //Log.d("THREAD MESSAGE BODY", Integer.toString((int) body.charAt(0)));
-            }
-        };
-
-        btThread = new PotatoThread(socket, onPacketRecieve);
+        btThread = new PotatoThread(socket, this.onPacketRecieve);
         btThread.start();
         btThread.sendPacket("STATUS","");
 
         this.loadPreferences();
         editUnlock.setText(defaultPassword);
 
-        lockBttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //displayToast("CLICKING");
+        lockBttn.setOnClickListener(this.lockBttnClick);
+        soundBttn.setOnClickListener(soundBttnClick);
+        modPasswordBttn.setOnClickListener(modPasswordBttnClick);
+        editBttn.setOnClickListener(editBttnClick);
 
-                if (isLocked == STATUS_ON) {
-                    isLocked = STATUS_TURNING_OFF;
-                    String password = editUnlock.getText().toString();
-                    Log.d("PASSWORDU",password);
-                    lockBttn.setBackgroundResource(R.drawable.lock_closed_blue);
-                    btThread.sendPacket("UNLOCK",password);
-
-                } else if (isLocked == STATUS_TURNING_ON) {
-                    displayToast("turning on...");
-
-                } else if (isLocked == STATUS_TURNING_OFF) {
-                    displayToast("turning off...");
-
-                } else if (isLocked == STATUS_OFF) {
-                    isLocked = STATUS_TURNING_ON;
-                    String password = editUnlock.getText().toString();
-                    Log.d("PASSWORDL",password);
-                    lockBttn.setBackgroundResource(R.drawable.lock_open_blue);
-                    btThread.sendPacket("LOCK",password);
-
-                } else {
-                    displayToast("WROMG LOCKED STATUS: "+Integer.toString(isLocked));
-                }
-            }
-        });
-
-        soundBttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (isBuzzing == STATUS_ON) {
-                    isBuzzing = STATUS_TURNING_OFF;
-                    btThread.sendPacket("UNBUZZ","1");
-                    soundBttn.setBackgroundResource(R.drawable.bluetooth_searching_blue);
-                    displayToast("unbuzzing");
-
-                } else if (isBuzzing == STATUS_TURNING_ON) {
-                    displayToast("turning on buzzer...");
-
-                } else if (isBuzzing == STATUS_TURNING_OFF) {
-                    displayToast("turning off buzzer...");
-
-                } else if (isBuzzing == STATUS_OFF) {
-                    isBuzzing = STATUS_TURNING_ON;
-                    btThread.sendPacket("BUZZ","1");
-                    soundBttn.setBackgroundResource(R.drawable.bluetooth_disabled_blue);
-                    displayToast("buzzing!");
-
-                } else {
-                    displayToast("WROMG BUZZ STATUS: "+Integer.toString(isBuzzing));
-                }
-            }
-        });
-
-        editPassword.setOnKeyListener(new View.OnKeyListener() {
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                // If the event is a key-down event on the "enter" button
-                if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
-                        (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                    // Perform action on key press
-                    displayToast("Entered data... [EDITEXT]");
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        modPasswordBttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                displayToast("editing...");
-
-                String password1 = editUnlock.getText().toString();
-                String password2 = editReenter.getText().toString();
-
-                if (password1.equals(password2)) {
-                    if (isAuthenticate == STATUS_OFF) {
-                        isAuthenticate = STATUS_TURNING_ON;
-                        modPasswordBttn.setBackgroundResource(R.drawable.input_blue);
-                        changePassword(password1,editPassword.getText().toString());
-
-                    } else if (isAuthenticate == STATUS_TURNING_ON) {
-                        displayToast("authenticating...");
-                    } else {
-                        displayToast("WROMG PASSWORD STATUS: "+Integer.toString(isAuthenticate));
-                    }
-
-                } else {
-                    displayToast("passwords do not match!");
-                }
-
-            }
-        });
-
-        editBttn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                displayToast("editing...");
-
-                if (isEditing == STATUS_OFF) {
-                    isEditing = STATUS_ON;
-                    editReenter.setVisibility(View.VISIBLE);
-                    editPassword.setVisibility(View.VISIBLE);
-                    modPasswordBttn.setVisibility(View.VISIBLE);
-
-                    editUnlock.setText(defaultPassword);
-                    editReenter.setText(defaultPassword);
-
-                } else {
-                    isEditing = STATUS_OFF;
-                    editReenter.setVisibility(View.GONE);
-                    editPassword.setVisibility(View.GONE);
-                    modPasswordBttn.setVisibility(View.GONE);
-
-                    editUnlock.setText(defaultPassword);
-                }
-
-                /*
-                if (isLocked == true) {
-                    String password = editUnlock.getText().toString();
-                    Log.d("PASSWORDU",password);
-                    btThread.sendPacket("UNLOCK",password);
-                } else {
-                    String password = editUnlock.getText().toString();
-                    Log.d("PASSWORDL",password);
-                    btThread.sendPacket("LOCK",password);
-                }
-                */
-            }
-        });
+        editPassword.setOnKeyListener(editPasswordPress);
     }
+
+    private View.OnClickListener editBttnClick = new View.OnClickListener() {
+        public void onClick(View v) {
+            displayToast("editing...");
+
+            if (isEditing == STATUS_OFF) {
+                isEditing = STATUS_ON;
+                editReenter.setVisibility(View.VISIBLE);
+                editPassword.setVisibility(View.VISIBLE);
+                modPasswordBttn.setVisibility(View.VISIBLE);
+
+                editUnlock.setText(defaultPassword);
+                editReenter.setText(defaultPassword);
+
+            } else {
+                isEditing = STATUS_OFF;
+                editReenter.setVisibility(View.GONE);
+                editPassword.setVisibility(View.GONE);
+                modPasswordBttn.setVisibility(View.GONE);
+
+                editUnlock.setText(defaultPassword);
+            }
+        }
+    };
+
+    private View.OnClickListener modPasswordBttnClick = new View.OnClickListener() {
+        public void onClick(View v) {
+            displayToast("editing...");
+
+            String password1 = editUnlock.getText().toString();
+            String password2 = editReenter.getText().toString();
+
+            if (password1.equals(password2)) {
+                if (isAuthenticate == STATUS_OFF) {
+                    isAuthenticate = STATUS_TURNING_ON;
+                    modPasswordBttn.setBackgroundResource(R.drawable.input_blue);
+                    changePassword(password1,editPassword.getText().toString());
+
+                } else if (isAuthenticate == STATUS_TURNING_ON) {
+                    displayToast("authenticating...");
+                } else {
+                    displayToast("WROMG PASSWORD STATUS: "+Integer.toString(isAuthenticate));
+                }
+
+            } else {
+                displayToast("passwords do not match!");
+            }
+
+        }
+    };
+
+    private View.OnKeyListener editPasswordPress = new View.OnKeyListener() {
+        public boolean onKey(View v, int keyCode, KeyEvent event) {
+            // If the event is a key-down event on the "enter" button
+            if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
+                    (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                // Perform action on key press
+                displayToast("Entered data... [EDITEXT]");
+                return true;
+            }
+            return false;
+        }
+    };
+
+    private View.OnClickListener soundBttnClick = new View.OnClickListener() {
+        public void onClick(View v) {
+            if (isBuzzing == STATUS_ON) {
+                isBuzzing = STATUS_TURNING_OFF;
+                btThread.sendPacket("UNBUZZ","1");
+                soundBttn.setBackgroundResource(R.drawable.bluetooth_searching_blue);
+                displayToast("unbuzzing");
+
+            } else if (isBuzzing == STATUS_TURNING_ON) {
+                displayToast("turning on buzzer...");
+
+            } else if (isBuzzing == STATUS_TURNING_OFF) {
+                displayToast("turning off buzzer...");
+
+            } else if (isBuzzing == STATUS_OFF) {
+                isBuzzing = STATUS_TURNING_ON;
+                btThread.sendPacket("BUZZ","1");
+                soundBttn.setBackgroundResource(R.drawable.bluetooth_disabled_blue);
+                displayToast("buzzing!");
+
+            } else {
+                displayToast("WROMG BUZZ STATUS: "+Integer.toString(isBuzzing));
+            }
+        }
+    };
+
+    private Handler onPacketRecieve = new Handler() {
+        public void handleMessage(Message mssg) {
+            String header = ((PotatoThread.Packet) mssg.obj).header;
+            String body = ((PotatoThread.Packet) mssg.obj).body;
+
+            if (header == null) {
+                //onDestroy();
+                displayToast("connection disconneted");
+                //finish();
+                (new Handler()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {finish(); /*Do something after 100ms*/ }
+                }, 1000);
+
+            } else if (header.equals("STATUS_RETURN")) {
+                switch ((int) body.charAt(0)) {
+                    case 1:
+                        unlockLockBttn();
+                        break;
+                    case 2:
+                        lockLockBttn();
+                        break;
+                    default:
+                        Log.d("ERRRRRRORRRRRRR STATUS",Integer.toString((int) body.charAt(0)));
+                }
+
+            } else if (header.equals("unlocked")) {
+                unlockLockBttn();
+            } else if (header.equals("locked")) {
+                lockLockBttn();
+
+            } else if (header.equals("UNLOCK_FAIL")) {
+                revertLockStatus();
+                displayToast("Wrong password - cannot unlock");
+
+            } else if (header.equals("LOCK_FAIL")) {
+                revertLockStatus();
+                displayToast("Wrong password - cannot lock");
+
+            } else if (header.equals("BUZZED")) {
+                isBuzzing = STATUS_ON;
+                soundBttn.setBackgroundResource(R.drawable.bluetooth_searching_black);
+            } else if (header.equals("UNBUZZED")) {
+                isBuzzing = STATUS_OFF;
+                soundBttn.setBackgroundResource(R.drawable.bluetooth_disabled_black);
+
+            } else if (header.equals("CHANGE_PASSWORD_STATUS")) {
+                if (body.equals("1")) {
+                    isAuthenticate = STATUS_OFF;
+                    modPasswordBttn.setBackgroundResource(R.drawable.input_black);
+                    displayToast("password changed!");
+                } else {
+                    isAuthenticate = STATUS_OFF;
+                    modPasswordBttn.setBackgroundResource(R.drawable.input_black);
+                    displayToast("Wrong password entered");
+                }
+
+            } else {
+                Log.d("WRONG_HEADER",header);
+                displayToast("WRONG_HEADER: ["+header+"]");
+            }
+
+            //Log.d("THREAD MESSAGE HEAD", header);
+            //Log.d("THREAD MESSAGE BODY", Integer.toString((int) body.charAt(0)));
+        }
+    };
+
+    private View.OnClickListener lockBttnClick = new View.OnClickListener() {
+        public void onClick(View v) {
+            //displayToast("CLICKING");
+
+            if (isLocked == STATUS_ON) {
+                isLocked = STATUS_TURNING_OFF;
+                String password = editUnlock.getText().toString();
+                Log.d("PASSWORDU",password);
+                lockBttn.setBackgroundResource(R.drawable.lock_closed_blue);
+                btThread.sendPacket("UNLOCK",password);
+
+            } else if (isLocked == STATUS_TURNING_ON) {
+                displayToast("turning on...");
+
+            } else if (isLocked == STATUS_TURNING_OFF) {
+                displayToast("turning off...");
+
+            } else if (isLocked == STATUS_OFF) {
+                isLocked = STATUS_TURNING_ON;
+                String password = editUnlock.getText().toString();
+                Log.d("PASSWORDL",password);
+                lockBttn.setBackgroundResource(R.drawable.lock_open_blue);
+                btThread.sendPacket("LOCK",password);
+
+            } else {
+                displayToast("WROMG LOCKED STATUS: "+Integer.toString(isLocked));
+            }
+        }
+    };
 
     private void loadPreferences() {
         String password = sharedPref.getString(activeDevice.getAddress(), null);
