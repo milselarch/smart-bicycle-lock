@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include <EEPROM.h>
 
 // creates a "virtual" serial port/UART
 // connect BT module TX to D13
@@ -252,6 +253,13 @@ String charArrayToString(unsigned char *charArray) {
     return answer;
 }
 
+int cmp(unsigned char input[], char check) {
+    for (int i = 0;; i++) {
+
+            
+    }    
+}
+
 void loop() {
     BTClient.cheak();
 
@@ -263,6 +271,8 @@ void loop() {
         BTClient.sendPacketAuto(mssgHeader1, BTClient.acqHeader());
         unsigned char mssgHeader2[] = "body_is"; 
         BTClient.sendPacketAuto(mssgHeader2, BTClient.acqBody());
+
+        BTClient.resetRecv();
     }
     
     delay(100);
