@@ -9,7 +9,7 @@ SoftwareSerial BT(D7, D8);
 
 void clearArray(unsigned char *arr, const unsigned short arrLength) {
     for (int i = 0; i < arrLength; i++) {
-        arr[i] = 0;
+        arr[i] = '\0';
     }
 }
 
@@ -138,7 +138,7 @@ public:
 
     void wipeRecvPacket() {
         for (int i = 0; i < 257; i++) {
-            recvPacket[i] = 0;
+            recvPacket[i] = '\0';
         }
     }
 
@@ -161,15 +161,9 @@ public:
             resetTimer();
         }
 
-        //Serial.print("BT AVA: ");
-        //Serial.println(BT.available());
-        //Serial.print("RECV STATUS: ");
-        //Serial.println(RECV_STATUS);
-
-        while (BT.available() and RECV_STATUS != 2) {
+        
+        if (BT.available() and RECV_STATUS != 2) {
             // if text arrived in from BT serial...
-            Serial.print("!");
-            
             if (RECV_STATUS == 0) {
                 clearArray(header, 255);    
                 headerLength = 0;
@@ -180,8 +174,7 @@ public:
                 this->resetTimer();
                 this->startTimer();
 
-                recvPacket[0] = int(BT.read());
-                Serial.println(String(char(recvPacket[recvIndex])));
+                recvPacket[0] = BT.read();
 
                 recvIndex = 1;
                 RECV_STATUS = 1;
@@ -192,12 +185,10 @@ public:
                 recvIndex += 1;
 
                 Serial.print("INDEX-CHEAK ");
-                Serial.print(recvIndex);
-                Serial.print(" ");
-                Serial.write(recvPacket[0]);
-                Serial.println(recvPacket[0]);
+                Serial.print();
+                Serial.print();
                 
-                if (recvIndex > int(recvPacket[0])) {
+                if (recvIndex > recvPacket[0]) {
                     headerLength = acqPacketHeader(header);
                     bodyLength = acqPacketBody(body);
                     wipeRecvPacket();
@@ -235,10 +226,8 @@ void setup() {
 	//pinMode(13, OUTPUT);
 	// set the data rate for the SoftwareSerial port
     Serial.begin(115200);
-    Serial.flush();
     
-	BT.begin(9600);
-    BT.flush();
+	BT.begin(57600);
 	// Send test message to other device
 	BT.print("Hello from Arduino");
 }

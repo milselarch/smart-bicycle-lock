@@ -15,10 +15,11 @@ def package(data):
      header,body = data.split(',')
      assert len(body) + len(header) < 254
 
-     new = [len(header)+len(body)+1,len(header)]
+     new = [chr(len(header)+len(body)+1), chr(len(header))]
      new += header.encode('ascii')
      new += body.encode('ascii')
-     new = b''.join([bytes(char) for char in new])
+     #new = [bytes(char) for char in new]
+     new = b''.join(new)
      
      print('packet sent: ')
      print(new)
