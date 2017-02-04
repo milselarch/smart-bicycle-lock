@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include "Packetify.h"
+#include "misc.h"
 
 // creates a "virtual" serial port/UART
 // connect BT module TX to D13
@@ -21,39 +22,13 @@ void setup() {
 	BT.print("Hello from Arduino");
 }
 
-String charArrayToString(char *charArray) {
-    String answer = "";
-    for (int i = 0; charArray[i] != '\0'; i++) {
-        answer += charArray[i];
-    }
-
-    return answer;
-}
-
-int cmp(char input[], char check[]) {
-    for (int i = 0;; i++) {
-        if (input[i] == '\0' && check[i] == '\0') { break; }
-        else if (input[i] == '\0' && check[i] != '\0') { return 1; }
-        else if (input[i] != '\0' && check[i] == '\0') { return -1; }
-        else if (input[i] > check[i]) { return 1; }
-        else if (input[i] < check[i]) { return -1; }
-        else {}
-    }
-    
-    return 0;
-}
-
-int cmp(char input[], String check) {
-    return cmp(input, check.c_str());
-}
-
 char password[8];
 
-void readEEPROM(char *data) {
+void readEEPROM(const char *data) {
     data = password;
 }
 
-void writeEEPROM(char _data[]) {
+void writeEEPROM(const char _data[]) {
     for (char i=0; i<8; i++) {
         password[i] = _data[i];
         
@@ -64,7 +39,7 @@ void writeEEPROM(char _data[]) {
     }
 }
 
-char cmpEEPROM(char input[], char check[]) {
+char cmpEEPROM(const char input[], const char check[]) {
     for (int i = 0;; i++) {
         char inputChar = input[i];
         char checkChar = check[i];
@@ -81,7 +56,7 @@ char cmpEEPROM(char input[], char check[]) {
     return 0;
 }
 
-char cmpEEPROML(char input[], char check[], const int length) {
+char cmpEEPROML(const char input[], const char check[], int length) {
     for (int i = 0; i<length ; i++) {
         char inputChar = input[i];
         char checkChar = check[i];
@@ -98,7 +73,7 @@ char cmpEEPROML(char input[], char check[], const int length) {
     return 0;
 }
 
-void changePassword(char *currentPassword, char *newPassword) {
+void changePassword(const char *currentPassword, const char *newPassword) {
     char password[8];
     readEEPROM(password);
     
@@ -149,24 +124,26 @@ void loop() {
         //sendPacketAuto("test", "blob");
         //sendPacketAuto("header_is", acqHeader());
         //sendPacketAuto("body_is", acqBody());
-        if (cmp(BTClient.acqHeader(), "heartbeat") == 0) {
+        const char *header = BTClient.acqHeader();
+        
+        if (strcmp(header, "heartbeat") == 0) {
             BTClient.sendPacketAuto("heartbeat", "1");
             
-        } else if (cmp(BTClient.acqHeader(), "VERS") == 0) {
+        } else if (strcmp(header, "VERS") == 0) {
             BTClient.sendPacketAuto("version: ", "v1.15");
             
-        } else if (cmp(BTClient.acqHeader(), "WAIT") == 0) {
+        } else if (strcmp(header, "WAIT") == 0) {
             //PORTAbits.RA0 = 1;
             Serial.print("RA0 is ON");
             delay(1000);
             Serial.print("RA0 is OFF");
             
-        } else if (cmp(BTClient.acqHeader(), "STATUS") == 0) {
+        } else if (strcmp(header, "STATUS") == 0) {
             char isLocked[1];
             isLocked[0] = LOCKED + 1;
             BTClient.sendPacketAuto("STATUS_RETURN", isLocked);
             
-        } else if (cmp(BTClient.acqHeader(), "CONFIG") == 0) {
+        } else if (strcmp(header, "CONFIG") == 0) {
             char bLengthArray[1];
             bLengthArray[0] = BTClient.acqBodyLength();
             BTClient.sendPacketAuto("CONFIG_LENGTH", bLengthArray);
@@ -178,7 +155,7 @@ void loop() {
             //UART_Write_Text("\r\n");
             //sendPacketAuto("COMMAND", acqBody());
             
-        } else if (cmp(BTClient.acqHeader(), "UNLOCK") == 0) {
+        } else if (strcmp(header, "UNLOCK") == 0) {
             char password[8];
             readEEPROM(password);
                     
@@ -197,11 +174,11 @@ void loop() {
                 BTClient.sendPacketAuto("UNLOCK_FAIL", "1");
             }
             
-        } else if (cmp(BTClient.acqHeader(), "LOCK") == 0) {
+        } else if (strcmp(header, "LOCK") == 0) {
             char password[8];
             readEEPROM(password);
                     
-            if (cmpEEPROM(BTClient.acqBody(), password) == 0) {
+            if (cmpEEPROM(header, password) == 0) {
                 delay(100);
 
                 /*
@@ -223,15 +200,15 @@ void loop() {
                 BTClient.sendPacketAuto("LOCK_FAIL", "1");
             }
             
-        } else if (cmp(BTClient.acqHeader(), "CHANGE_PASSWORD") == 0) {
+        } else if (strcmp(header, "CHANGE_PASSWORD") == 0) {
             changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
                 
-        } else if (cmp(BTClient.acqHeader(), "EE") == 0) {
+        } else if (strcmp(BTClient.acqHeader(), "EE") == 0) {
             char password[8];
             readEEPROM(password);
             BTClient.sendPacket("current password: ",password,18,8);
             
-        } else if (cmp(BTClient.acqHeader(), "EERESET") == 0) {
+        } else if (strcmp(header, "EERESET") == 0) {
             //resetEEPROM(0x00);
             
             /*
@@ -250,16 +227,16 @@ void loop() {
             readEEPROM(password);
             BTClient.sendPacket("reset password: ",password,16,8);
         
-        } else if (cmp(BTClient.acqHeader(), "LIGHT") == 0) {
+        } else if (strcmp(header, "LIGHT") == 0) {
             //light = !light;
             //PORTAbits.RA0 = light;
             BTClient.sendPacketAuto("LIGHED", "1");
             
-        } else if (cmp(BTClient.acqHeader(), "BUZZ") == 0) {
+        } else if (strcmp(header, "BUZZ") == 0) {
             //PORTDbits.RD5 = 1;
             BTClient.sendPacketAuto("BUZZED","1");
             
-        } else if (cmp(BTClient.acqHeader(), "UNBUZZ") == 0) {
+        } else if (strcmp(header, "UNBUZZ") == 0) {
             //PORTDbits.RD5 = 0;
             BTClient.sendPacketAuto("UNBUZZED","1");
             

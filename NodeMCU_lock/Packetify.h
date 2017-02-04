@@ -1,12 +1,12 @@
-#include <SoftwareSerial.h>
+#ifndef PACKETIFY_H_INCLUDED
+#define PACKETIFY_H_INCLUDED
 
+#include <SoftwareSerial.h>
 SoftwareSerial BT(D7, D8);
 
-void clearArray(char *arr, const short arrLength) {
-    for (int i = 0; i < arrLength; i++) {
-        arr[i] = 0;
-    }
-}
+#include "Timer.h"
+#include "misc.h"
+
 
 class PotatoClient {
 private: 
@@ -20,22 +20,11 @@ private:
 
     short headerLength;
     short bodyLength;
-    
-    long startTime;
-    long upkeep;
-    
+    Timer timer;
+
 public:
     PotatoClient() {
-        this->resetTimer();
-    }
-
-    long timePassed() {
-        if (this->upkeep == 0) {
-            long duration = millis() - this->startTime;
-            return duration;
-        } else {
-            return this->upkeep;
-        }
+        this->timer.resetTimer();
     }
 
     void writeChar(char character) {
@@ -51,24 +40,6 @@ public:
         BT.write(character);
         BT.flush();
     }
-    
-    void resetTimer() {
-        this->startTime = millis();
-        this->upkeep = 0;
-    }
-
-    void pauseTimer() {
-        this->upkeep = this->timePassed();
-        if (this->upkeep == 0) { this->upkeep = 1; }
-    }
-
-    void startTimer() {
-        if (this->upkeep != 0) {
-            this->startTime = millis() - this->upkeep;
-            this->upkeep = 0;
-        }
-    }
-
     
     void sendPacket(
         const char *header, String body,
@@ -113,15 +84,15 @@ public:
     }
 
     void sendPacketAuto(const char *header, String body) {
-        Serial.println("START HEADC SBODY AUTOSEND");
+        //Serial.println("START HEADC SBODY AUTOSEND");
         this->sendPacketAuto(header, body.c_str());
     }
     void sendPacketAuto(String header, const char *body) {
-        Serial.println("AA");
+        //Serial.println("AA");
         this->sendPacketAuto(header.c_str(), body);
     }
     void sendPacketAuto(String header, String body) {
-        Serial.println("START HEADS SBODY AUTOSEND");
+        //Serial.println("START HEADS SBODY AUTOSEND");
         this->sendPacketAuto(header.c_str(), body.c_str());
     }
 
@@ -133,15 +104,8 @@ public:
         char headerLength = 0;
         char bodyLength = 0;
 
-        Serial.println("PRE-LOOP");
-
         for (int i = 0; header[i] != 0; i++) { headerLength++; }
         for (int i = 0; body[i] != 0; i++) { bodyLength++; }
-
-        Serial.print("HEADERLEN ");
-        Serial.println(headerLength);
-        Serial.print("BODYLEN ");
-        Serial.println(bodyLength);
 
         const char totalLength = headerLength + bodyLength + 1;
         this->writeChar(totalLength);
@@ -187,7 +151,7 @@ public:
     }
 
     void cheak() {
-        if (timePassed() > 1500 and RECV_STATUS == 1) {
+        if (this->timer.timePassed() > 1500 and RECV_STATUS == 1) {
             char currentIndex[1];
             currentIndex[0] = recvIndex;
 
@@ -197,7 +161,7 @@ public:
 
             RECV_STATUS = 0;
             recvIndex = 0;
-            resetTimer();
+            this->timer.resetTimer();
         }
 
         //Serial.print("BT AVA: ");
@@ -210,14 +174,14 @@ public:
             Serial.print("!");
             
             if (RECV_STATUS == 0) {
-                clearArray(header, 255);    
+                misc::clearArray(header, 255);    
                 headerLength = 0;
-                clearArray(body, 255);
+                misc::clearArray(body, 255);
                 bodyLength = 0;
 
                 wipeRecvPacket();
-                this->resetTimer();
-                this->startTimer();
+                this->timer.resetTimer();
+                this->timer.startTimer();
 
                 recvPacket[0] = BT.read();
                 Serial.println(String(char(recvPacket[recvIndex])));
@@ -241,12 +205,12 @@ public:
                     bodyLength = acqPacketBody(body);
                     wipeRecvPacket();
 
-                    pauseTimer();
+                    this->timer.pauseTimer();
                     RECV_STATUS = 2;
                     Serial.print("RECV_COMPLETE");
                 
                 } else {
-                    resetTimer();
+                    this->timer.resetTimer();
                 }
             }
         }
@@ -256,16 +220,17 @@ public:
         if (RECV_STATUS == 2) {
             RECV_STATUS = 0;
             Serial.println("RESET RECV STATUS");
-            resetTimer();
+            this->timer.resetTimer();
         }    
     }
 
     short acqRecvStatus() { return this->RECV_STATUS; }
     short acqHeaderLength() { return this->headerLength; }
     short acqBodyLength() { return this->bodyLength; }
-    char *acqRecvPacket() { return this->recvPacket; }
-    char *acqHeader() { return this->header; }
-    char *acqBody() { return this->body; }
+    const char *acqRecvPacket() { return this->recvPacket; }
+    const char *acqHeader() { return this->header; }
+    const char *acqBody() { return this->body; }
 };
 
+#endif
 
