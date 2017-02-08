@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include "Packetify.h"
+#include "password.h"
 #include "misc.h"
 
 // creates a "virtual" serial port/UART
@@ -7,6 +8,7 @@
 // connect BT module RX to D15
 // connect BT Vcc to 5V, GND to GND
 
+short LOCKED = 0;
 PotatoClient BTClient;
 
 void setup() {
@@ -19,103 +21,9 @@ void setup() {
 	BT.begin(9600);
     BT.flush();
 	// Send test message to other device
-	BT.print("Hello from Arduino");
+
+    Password::start();
 }
-
-char password[8];
-
-void readEEPROM(const char *data) {
-    data = password;
-}
-
-void writeEEPROM(const char _data[]) {
-    for (char i=0; i<8; i++) {
-        password[i] = _data[i];
-        
-        //ee_write_byte(i, _data+i);;
-        //PORTAbits.RA0 = !PORTAbits.RA0;
-        delay(20);
-        if (_data[i] == '\0') {break;};
-    }
-}
-
-char cmpEEPROM(const char input[], const char check[]) {
-    for (int i = 0;; i++) {
-        char inputChar = input[i];
-        char checkChar = check[i];
-        if (inputChar == 0xff) {inputChar = 0; }
-        if (checkChar == 0xff) {checkChar = 0; }
-        
-        if (inputChar == '\0' && checkChar == '\0') { break; }
-        else if (inputChar == '\0' && checkChar != '\0') { return 1; }
-        else if (inputChar != '\0' && checkChar == '\0') { return -1; }
-        else if (inputChar > checkChar) { return 1; }
-        else if (inputChar < checkChar) { return -1; }
-        else {}
-    }
-    return 0;
-}
-
-char cmpEEPROML(const char input[], const char check[], int length) {
-    for (int i = 0; i<length ; i++) {
-        char inputChar = input[i];
-        char checkChar = check[i];
-        if (inputChar == 0xff) {inputChar = 0; }
-        if (checkChar == 0xff) {checkChar = 0; }
-        
-        if (inputChar == '\0' && checkChar == '\0') { break; }
-        else if (inputChar == '\0' && checkChar != '\0') { return 1; }
-        else if (inputChar != '\0' && checkChar == '\0') { return -1; }
-        else if (inputChar > checkChar) { return 1; }
-        else if (inputChar < checkChar) { return -1; }
-        else {}
-    }
-    return 0;
-}
-
-void changePassword(const char *currentPassword, const char *newPassword) {
-    char password[8];
-    readEEPROM(password);
-    
-    //char passwordMatch = 1;
-    //char pseudochar;
-    
-    /*
-    int i = 0;
-    for (i=0; i<8; i++) {
-        pseudochar = password[i];
-        if (pseudochar == 0xff) {
-            pseudochar = 0;
-        }
-        
-        if (currentPassword[i] != pseudochar) {
-            passwordMatch = 0;
-            break;
-        } else if (currentPassword[i] == '\0') {
-            break;
-        }
-    }
-    */
-    
-    if (cmpEEPROML(currentPassword,password,8) == 0) {
-        //write_data_nvm(newPassword,0x00);
-        writeEEPROM(newPassword);
-        readEEPROM(password);        
-                
-        //writeEEPROM(newPassword);
-        BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS","1");
-        //sendPacketAuto("CHANGE_PASSWORD_SET",newPassword);
-        //sendPacketAuto("NOW_PASSWORD",password);
-        
-    } else {
-        BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS","0");
-        //sendPacketAuto("PASSWORD_NOW",password);
-        //sendPacketAuto("PASSWORD_SENT",currentPassword);
-        //sendPacket("PASSCHAR_FAIL",&i,13,1);
-    }
-}
-
-short LOCKED = 0;
 
 void loop() {
     BTClient.cheak();
@@ -125,6 +33,7 @@ void loop() {
         //sendPacketAuto("header_is", acqHeader());
         //sendPacketAuto("body_is", acqBody());
         const char *header = BTClient.acqHeader();
+        const char *body = BTClient.acqBody();
         
         if (strcmp(header, "heartbeat") == 0) {
             BTClient.sendPacketAuto("heartbeat", "1");
@@ -157,9 +66,9 @@ void loop() {
             
         } else if (strcmp(header, "UNLOCK") == 0) {
             char password[8];
-            readEEPROM(password);
+            Password::readEEPROM(password);
                     
-            if (cmpEEPROM(BTClient.acqBody(), password) == 0) {
+            if (Password::cmpEEPROM(body, password) == 0) {
                 delay(100);
                 Serial.println("UNLOCK");
                 //PORTAbits.RA0 = 1;
@@ -176,9 +85,9 @@ void loop() {
             
         } else if (strcmp(header, "LOCK") == 0) {
             char password[8];
-            readEEPROM(password);
+            Password::readEEPROM(password);
                     
-            if (cmpEEPROM(header, password) == 0) {
+            if (Password::cmpEEPROM(body, password) == 0) {
                 delay(100);
 
                 /*
@@ -201,11 +110,11 @@ void loop() {
             }
             
         } else if (strcmp(header, "CHANGE_PASSWORD") == 0) {
-            changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
+            Password::changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
                 
         } else if (strcmp(BTClient.acqHeader(), "EE") == 0) {
             char password[8];
-            readEEPROM(password);
+            Password::readEEPROM(password);
             BTClient.sendPacket("current password: ",password,18,8);
             
         } else if (strcmp(header, "EERESET") == 0) {
@@ -219,12 +128,13 @@ void loop() {
             }
             sendPacketAuto("reset password: ",password);
             */
+            
             char blank[8];
             for (int i=0; i<8; i++) {blank[i] = 0;}
-            writeEEPROM(blank);
+            Password::writeEEPROM(blank);
             
             char password[8];
-            readEEPROM(password);
+            Password::readEEPROM(password);
             BTClient.sendPacket("reset password: ",password,16,8);
         
         } else if (strcmp(header, "LIGHT") == 0) {
@@ -241,21 +151,9 @@ void loop() {
             BTClient.sendPacketAuto("UNBUZZED","1");
             
         } else {
-            Serial.println("WRONG_DATA");
-            Serial.print((char*) BTClient.acqHeader());
-            Serial.println("POST HEADER ACQ");
             BTClient.sendPacketAuto("WRONG HEADER ", BTClient.acqHeader());
-            Serial.print("WRONG HEAD SEND DONE");
             BTClient.sendPacketAuto("WRONG BODY ", BTClient.acqBody());
-            Serial.print("WRONG BODY SEND DONE");
         }
-        
-        /*
-        sendPacket(
-            acqHeader(),acqBody()
-            ,acqHeaderLength(),acqBodyLength()
-            );
-        */
 
         Serial.print("RESET RECV");
         BTClient.resetRecv();

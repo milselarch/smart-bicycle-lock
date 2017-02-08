@@ -47,8 +47,8 @@ def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
                try:
                     data += s.recv(1)
 
-                    #print("CHAR", char)
-                    if len(data) > data[0]:
+                    #print("LEN", len(data), ord(data[0]))
+                    if len(data) > ord(data[0]):
                          print('PACKET', data)
                          data = b''
 
@@ -67,6 +67,7 @@ def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
                text = input()
 
           if text == "quit": break
+          elif text.count(',') != 1: break
           elif text[:5] == 'pass:':
                now,new = text[5:].split(',')
                now = now+'\0'*(8-len(now))
