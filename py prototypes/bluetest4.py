@@ -67,7 +67,7 @@ def connect(serverMACAddress = '20:16:01:12:48:47', port = 1):
                text = input()
 
           if text == "quit": break
-          elif text.count(',') != 1: break
+          elif text.count(',') != 1: continue
           elif text[:5] == 'pass:':
                now,new = text[5:].split(',')
                now = now+'\0'*(8-len(now))

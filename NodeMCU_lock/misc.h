@@ -18,6 +18,17 @@ public:
         return answer;
     }
 
+    static void printCharArray(char charArray[]) {
+        Serial.print("[");
+
+        for (int i = 0; charArray[i] != '\0'; i++) {
+            Serial.print(int(charArray[i]));
+            Serial.print(", ");
+        }
+
+        Serial.println("]");
+    }
+
     static int strEquals(const char input[], const char check[]) {
         return (misc::cmp(input, check) == 0);
     }
@@ -41,4 +52,5 @@ public:
 };
 
 #endif
+
 

@@ -1,5 +1,7 @@
 #include <SoftwareSerial.h>
+
 #include "Packetify.h"
+#include "hardware.h"
 #include "password.h"
 #include "misc.h"
 
@@ -8,8 +10,10 @@
 // connect BT module RX to D15
 // connect BT Vcc to 5V, GND to GND
 
-short LOCKED = 0;
 PotatoClient BTClient;
+Hardware hardware;
+
+int TICKS = 0;
 
 void setup() {
   	// set digital pin to control as an output
@@ -27,6 +31,10 @@ void setup() {
 
 void loop() {
     BTClient.cheak();
+    
+    delay(10);
+    hardware.setLock();
+    delay(10);
 
     if (BTClient.acqRecvStatus() == 2) {
         //sendPacketAuto("test", "blob");
@@ -49,7 +57,7 @@ void loop() {
             
         } else if (strcmp(header, "STATUS") == 0) {
             char isLocked[1];
-            isLocked[0] = LOCKED + 1;
+            isLocked[0] = hardware.getLockStatus() + 1;
             BTClient.sendPacketAuto("STATUS_RETURN", isLocked);
             
         } else if (strcmp(header, "CONFIG") == 0) {
@@ -69,8 +77,9 @@ void loop() {
             Password::readEEPROM(password);
                     
             if (Password::cmpEEPROM(body, password) == 0) {
-                delay(100);
+                hardware.unlock();
                 Serial.println("UNLOCK");
+                
                 //PORTAbits.RA0 = 1;
                 /*
                 LOCKED = 0;
@@ -88,8 +97,7 @@ void loop() {
             Password::readEEPROM(password);
                     
             if (Password::cmpEEPROM(body, password) == 0) {
-                delay(100);
-
+                hardware.lock();
                 /*
                 //PORTAbits.RA0 = 1;
                 volatile int k;
@@ -102,7 +110,8 @@ void loop() {
                 PORTAbits.RA1 = 0;
                 PORTAbits.RA0 = 1;
                 */
-                Serial.print("LOCKED");
+                
+                Serial.println("LOCKED");
                 BTClient.sendPacketAuto("locked", "1");
                 
             } else {
@@ -110,7 +119,12 @@ void loop() {
             }
             
         } else if (strcmp(header, "CHANGE_PASSWORD") == 0) {
-            Password::changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
+            bool changed = Password::changePassword(BTClient.acqBody(), BTClient.acqBody()+8);
+            if (changed == true) {
+                BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS", "1");
+            } else {
+                BTClient.sendPacketAuto("CHANGE_PASSWORD_STATUS", "0");
+            }
                 
         } else if (strcmp(BTClient.acqHeader(), "EE") == 0) {
             char password[8];
@@ -155,11 +169,22 @@ void loop() {
             BTClient.sendPacketAuto("WRONG BODY ", BTClient.acqBody());
         }
 
-        Serial.print("RESET RECV");
+        Serial.println("RESET RECV");
         BTClient.resetRecv();
     }
     
     delay(50);
+
+    TICKS++;
+    if (TICKS % 100 == 0) {
+        TICKS = 0;
+        if (BTClient.available()) {
+            Serial.print("B");
+        } else {
+            Serial.print("!");
+        }
+    }
 }
+
 
 

@@ -7,7 +7,6 @@ SoftwareSerial BT(D7, D8);
 #include "Timer.h"
 #include "misc.h"
 
-
 class PotatoClient {
 private: 
     char recvPacket[257];
@@ -27,6 +26,10 @@ public:
         this->timer.resetTimer();
     }
 
+    bool available() {
+        return BT.available();
+    }
+
     void writeChar(char character) {
         /*
         BT.print(String(char(character)));
@@ -36,7 +39,7 @@ public:
         print will read the char as a number and send the characters for each digit
         write will send the character whose VALUE equals what the char's value is
         */
-        Serial.write(character);
+        //Serial.write(character);
         BT.write(character);
         BT.flush();
     }
@@ -171,9 +174,10 @@ public:
 
         while (BT.available() and RECV_STATUS != 2) {
             // if text arrived in from BT serial...
-            Serial.print("!");
+            //Serial.print("!");
             
             if (RECV_STATUS == 0) {
+                Serial.println("RECV_START");
                 misc::clearArray(header, 255);    
                 headerLength = 0;
                 misc::clearArray(body, 255);
@@ -183,22 +187,29 @@ public:
                 this->timer.resetTimer();
                 this->timer.startTimer();
 
+                Serial.print("START-R ");
+                misc::printCharArray(recvPacket);
+
                 recvPacket[0] = BT.read();
-                Serial.println(String(char(recvPacket[recvIndex])));
+                Serial.print("Packet init length: ");
+                Serial.println(int(recvPacket[recvIndex]));
 
                 recvIndex = 1;
                 RECV_STATUS = 1;
                 
             } else if (RECV_STATUS == 1) {
                 recvPacket[recvIndex] = BT.read();
-                Serial.println(String(char(recvPacket[recvIndex])));
+                //Serial.println(String(char(recvPacket[recvIndex])));
                 recvIndex += 1;
 
+                
                 Serial.print("INDEX-CHEAK ");
-                Serial.print(recvIndex);
+                Serial.print(int(recvPacket[0]));
                 Serial.print(" ");
-                Serial.write(recvPacket[0]);
-                Serial.println(recvPacket[0]);
+                Serial.print(int(recvIndex));
+                Serial.print(" ");
+                Serial.println(int(recvPacket[recvIndex-1]));
+         
                 
                 if (recvIndex > recvPacket[0]) {
                     headerLength = acqPacketHeader(header);
@@ -207,7 +218,7 @@ public:
 
                     this->timer.pauseTimer();
                     RECV_STATUS = 2;
-                    Serial.print("RECV_COMPLETE");
+                    Serial.println("RECV_COMPLETE");
                 
                 } else {
                     this->timer.resetTimer();
@@ -234,4 +245,5 @@ public:
 
 
 #endif
+
 

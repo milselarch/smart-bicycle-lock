@@ -55,12 +55,15 @@ public class LockActivity extends Activity {
     Button editBttn;
 
     private String defaultPassword = "";
+    private String password = "";
+
     public static final String MY_PREFS_NAME = "MyPrefs";
     SharedPreferences sharedPref;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
+        Log.d("MEH", "start-lock");
 
         sharedPref = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
 
@@ -85,14 +88,16 @@ public class LockActivity extends Activity {
         soundBttn = (Button) findViewById(R.id.btn_sound);
         editBttn = (Button) findViewById(R.id.btn_edit);
 
+        Log.d("DEF-PASSSTART", "START[");
+        this.loadPreferences();
+        Log.d("DEF-INIT-PASSREAD", defaultPassword);
+        editUnlock.setText(defaultPassword);
+
         socket = ((MyApplication) getApplication()).getBtSock();
 
         btThread = new PotatoThread(socket, this.onPacketRecieve);
         btThread.start();
-        btThread.sendPacket("STATUS","");
-
-        this.loadPreferences();
-        editUnlock.setText(defaultPassword);
+        btThread.sendPacket("STATUS", "");
 
         lockBttn.setOnClickListener(this.lockBttnClick);
         soundBttn.setOnClickListener(soundBttnClick);
@@ -112,8 +117,8 @@ public class LockActivity extends Activity {
                 editPassword.setVisibility(View.VISIBLE);
                 modPasswordBttn.setVisibility(View.VISIBLE);
 
-                editUnlock.setText(defaultPassword);
-                editReenter.setText(defaultPassword);
+                editUnlock.setText("");
+                editReenter.setText("");
 
             } else {
                 isEditing = STATUS_OFF;
@@ -209,17 +214,21 @@ public class LockActivity extends Activity {
                 switch ((int) body.charAt(0)) {
                     case 1:
                         unlockLockBttn();
+                        loadPreferences();
                         break;
                     case 2:
                         lockLockBttn();
+                        loadPreferences();
                         break;
                     default:
-                        Log.d("ERRRRRRORRRRRRR STATUS",Integer.toString((int) body.charAt(0)));
+                        Log.d("ERRRRRRORRRRRRR STATUS", Integer.toString((int) body.charAt(0)));
                 }
 
             } else if (header.equals("unlocked")) {
+                setDefaultPassword();
                 unlockLockBttn();
             } else if (header.equals("locked")) {
+                setDefaultPassword();
                 lockLockBttn();
 
             } else if (header.equals("UNLOCK_FAIL")) {
@@ -241,6 +250,7 @@ public class LockActivity extends Activity {
                 if (body.equals("1")) {
                     isAuthenticate = STATUS_OFF;
                     modPasswordBttn.setBackgroundResource(R.drawable.input_black);
+                    setDefaultPassword();
                     displayToast("password changed!");
                 } else {
                     isAuthenticate = STATUS_OFF;
@@ -261,13 +271,13 @@ public class LockActivity extends Activity {
     private View.OnClickListener lockBttnClick = new View.OnClickListener() {
         public void onClick(View v) {
             //displayToast("CLICKING");
+            password = editUnlock.getText().toString();
 
             if (isLocked == STATUS_ON) {
                 isLocked = STATUS_TURNING_OFF;
-                String password = editUnlock.getText().toString();
-                Log.d("PASSWORDU",password);
+                Log.d("PASSWORDU", password);
                 lockBttn.setBackgroundResource(R.drawable.lock_closed_blue);
-                btThread.sendPacket("UNLOCK",password);
+                btThread.sendPacket("UNLOCK", password);
 
             } else if (isLocked == STATUS_TURNING_ON) {
                 displayToast("turning on...");
@@ -289,10 +299,26 @@ public class LockActivity extends Activity {
     };
 
     private void loadPreferences() {
-        String password = sharedPref.getString(activeDevice.getAddress(), null);
-        if (password != null) {
-            defaultPassword = password;
+        Log.d("DEF-KEY-R", activeDevice.getAddress());
+        String defpass = sharedPref.getString(activeDevice.getAddress(), "");
+
+        if (!defpass.equals("")) {
+            defaultPassword = defpass;
+            Log.d("DEF-PASSREAD", defpass);
+        } else {
+            Log.d("DEF-PASSREAD", "<NOPE>");
         }
+    }
+
+    private void setDefaultPassword() {
+        Log.d("SET DEFAULT PASSWORD", password);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.clear();
+        Log.d("DEF-KEY-S", activeDevice.getAddress());
+        editor.putString(activeDevice.getAddress(), password);
+        editor.apply();
+
+        loadPreferences();
     }
 
     private void displayToast(String data) {
@@ -303,10 +329,12 @@ public class LockActivity extends Activity {
         isLocked = STATUS_OFF;
         lockBttn.setBackgroundResource(R.drawable.lock_open_black);
     }
+    
     void lockLockBttn() {
         isLocked = STATUS_ON;
         lockBttn.setBackgroundResource(R.drawable.lock_closed_black);
     }
+
     void revertLockStatus() {
         if (isLocked == STATUS_TURNING_OFF) {
             isLocked = STATUS_ON;
@@ -330,7 +358,6 @@ public class LockActivity extends Activity {
         }
         btThread.sendPacket("CHANGE_PASSWORD",nowPassword+newPassword);
     }
-
 
     @Override
     protected void onPause() {
