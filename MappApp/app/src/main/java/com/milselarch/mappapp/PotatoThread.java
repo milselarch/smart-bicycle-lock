@@ -143,7 +143,7 @@ class PotatoThread extends Thread {
             index++;
         }
 
-        Log.d("PACKET-SENT", Arrays.toString(packet));
+        Log.i("PACKET-SENT", Arrays.toString(packet));
         write(packet);
     }
 

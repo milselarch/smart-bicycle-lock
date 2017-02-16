@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.milselarch.mappapp"
-        minSdkVersion 19
+        minSdkVersion 18
         targetSdkVersion 24
         versionCode 1
         multiDexEnabled true

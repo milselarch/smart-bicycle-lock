@@ -56,10 +56,6 @@
         <activity
             android:name=".RestaurantMap"
             android:label="@string/title_activity_restaurant_map" />
-        <activity
-            android:name=".basic"
-            android:label="@string/title_activity_basic"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

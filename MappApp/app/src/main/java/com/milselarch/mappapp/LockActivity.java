@@ -404,7 +404,7 @@ public class LockActivity extends AppCompatActivityApi6 {
             return (true);
 
         } else if (item.getItemId() == R.id.map) {
-            finish();
+            //finish();
             //Get my current location
             myLatitude = gpsTracker.getLatitude();
             myLongitude = gpsTracker.getLongitude();
