@@ -290,7 +290,7 @@ public class MainActivity extends AppCompatActivityApi6 {
                 initArrayAdaptor();
 
             } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 
                 try {
                     Log.d("ADD_DEVICE:", device.getName());
@@ -302,6 +302,7 @@ public class MainActivity extends AppCompatActivityApi6 {
                 //mDeviceList.add(device);
                 mDeviceList.add(device);
                 //mListView.setAdapter(mAdapter);
+                //mAdapter.notifyDataSetChanged();
 
             } else if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
                 int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);

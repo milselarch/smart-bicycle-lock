@@ -1,6 +1,8 @@
 package com.milselarch.mappapp;
 
 import android.app.Application;
+import android.content.Context;
+import android.support.multidex.MultiDex;
 import android.bluetooth.BluetoothSocket;
 
 /**
@@ -23,5 +25,11 @@ public class MyApplication extends Application {
 
     public void setSomeVariable(String someVariable) {
         this.someVariable = someVariable;
+    }
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        MultiDex.install(this);
     }
 }

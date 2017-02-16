@@ -16,7 +16,8 @@
         android:fontFamily="monaco"
         android:textSize="28sp"
         android:textStyle="bold"
-        />
+        android:id="@+id/textView" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

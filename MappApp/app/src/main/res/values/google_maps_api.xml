@@ -1,0 +1,28 @@
+<resources>
+    <!--
+    HEY YOU THERE
+    You do realiise you can auto-generate the api key in like two steps
+    by going to console.developers.google.com/apis/credentials right?
+
+    TODO: Before you run your application, you need a Google Maps API key.
+
+    AIzaSyCGAhObKBMH-geX0j9oJObTFnOCQ8sQ0OE
+    AIzaSyAGXg3cATy2XhVMYCPJ0AIxQRMqKSW-qjo
+
+    To get one, follow this link, follow the directions and press "Create" at the end:
+
+    https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=68:23:DA:D3:86:79:74:74:F1:BC:54:64:53:EF:B0:33:29:32:F2:AC%3Bcom.sp.googleblob
+
+    You can also add your credentials to an existing key, using this line:
+    68:23:DA:D3:86:79:74:74:F1:BC:54:64:53:EF:B0:33:29:32:F2:AC;com.sp.googleblob
+
+    Alternatively, follow the directions here:
+    https://developers.google.com/maps/documentation/android/start#get-key
+
+    Once you have your key (it starts with "AIza"), replace the "google_maps_key"
+    string in this file.
+    -->
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">
+        AIzaSyAGXg3cATy2XhVMYCPJ0AIxQRMqKSW-qjo
+    </string>
+</resources>

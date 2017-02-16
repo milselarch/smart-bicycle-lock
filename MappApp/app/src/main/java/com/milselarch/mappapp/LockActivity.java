@@ -11,6 +11,8 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -19,13 +21,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.content.SharedPreferences;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Arrays;
 
 /**
  * Created by lenovo on 15/8/2016.
  */
 
-public class LockActivity extends Activity {
+public class LockActivity extends AppCompatActivityApi6 {
     public BluetoothDevice activeDevice;
     public BluetoothSocket socket;
     //Handler onPacketRecieve;
@@ -41,6 +45,7 @@ public class LockActivity extends Activity {
     private int isBuzzing = STATUS_OFF;
     private int isAuthenticate = STATUS_OFF;
 
+    TextView LocationText;
     TextView LockNameText;
     TextView LockMACText;
     EditText editUnlock;
@@ -54,6 +59,12 @@ public class LockActivity extends Activity {
     Button soundBttn;
     Button editBttn;
 
+    private GPSTracker gpsTracker;
+    private double latitude = 0.0d;
+    private double longitude = 0.0d;
+    private double myLatitude = 0.0d;
+    private double myLongitude = 0.0d;
+
     private String defaultPassword = "";
     private String password = "";
 
@@ -65,9 +76,11 @@ public class LockActivity extends Activity {
         setContentView(R.layout.activity_lock);
         Log.d("MEH", "start-lock");
 
+        gpsTracker = new GPSTracker(LockActivity.this);
         sharedPref = getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
 
         activeDevice = getIntent().getExtras().getParcelable("btdevice");
+        LocationText = (TextView) findViewById(R.id.location);
         LockNameText = (TextView) findViewById(R.id.device_name);
         LockNameText.setText(activeDevice.getName());
         LockMACText = (TextView) findViewById(R.id.device_MAC);
@@ -317,8 +330,6 @@ public class LockActivity extends Activity {
         Log.d("DEF-KEY-S", activeDevice.getAddress());
         editor.putString(activeDevice.getAddress(), password);
         editor.apply();
-
-        loadPreferences();
     }
 
     private void displayToast(String data) {
@@ -359,11 +370,70 @@ public class LockActivity extends Activity {
         btThread.sendPacket("CHANGE_PASSWORD",nowPassword+newPassword);
     }
 
+    public static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        BigDecimal bd = new BigDecimal(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d("MENU", "MENUPOP");
+        new MenuInflater(this).inflate(R.menu.details_option, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.get_location) {
+            if (gpsTracker.canGetLocation()) {
+                latitude = gpsTracker.getLatitude();
+                longitude = gpsTracker.getLongitude();
+                LocationText.setText(
+                    String.valueOf(round(latitude,5)) + ", " + String.valueOf(round(longitude,5))
+                );
+
+            } else {
+                // can't get location. GPS or Network is not enabled
+                // Ask user to enable GPS/network in settings
+
+                gpsTracker.showSettingsAlert();
+            }
+            return (true);
+
+        } else if (item.getItemId() == R.id.map) {
+            finish();
+            //Get my current location
+            myLatitude = gpsTracker.getLatitude();
+            myLongitude = gpsTracker.getLongitude();
+
+            Intent intent = new Intent(this, RestaurantMap.class);
+            intent.putExtra("LATITUDE", latitude);
+            intent.putExtra("LONGITUDE", longitude);
+            intent.putExtra("MYLATITUDE", myLatitude);
+            intent.putExtra("MYLONGITUDE", myLongitude);
+            intent.putExtra("NAME", activeDevice.getName());
+            startActivity(intent);
+            return (true);
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
     @Override
     protected void onPause() {
-        btThread.cancel();
         Log.d("THREAD_SOCK_CANCEL","YES");
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
+        btThread.cancel();
+        btThread.interrupt();
+        gpsTracker.stopSelf();
+        Log.d("DESTROY", "DESTROY");
     }
 }

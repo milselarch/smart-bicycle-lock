@@ -92,7 +92,7 @@ class PotatoThread extends Thread {
         while (true) {
             try {
                 // Read from the InputStream
-                Log.d("BYTES-READING","--");
+                Log.i("BYTES-READING","--");
                 bytes = mmInStream.read(charBuffer);
 
                 if (bytes == 1) {
@@ -101,7 +101,7 @@ class PotatoThread extends Thread {
                     recvIndex++;
 
                     if (recvIndex > buffer[0]) {
-                        Log.d("BYTES-RECIEVED", Arrays.toString(buffer));
+                        Log.i("BYTES-RECIEVED", Arrays.toString(buffer));
                         onRecieveHandler.obtainMessage(
                                 TYPE_MESSAGE , bytes, -1, new Packet(buffer)
                         ).sendToTarget();

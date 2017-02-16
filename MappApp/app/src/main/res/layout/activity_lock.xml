@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:padding="24dp"
     tools:context="com.milselarch.mappapp.LockActivity">
-    
+
     <TextView
         android:id="@+id/device_name"
         android:layout_width="wrap_content"
@@ -96,6 +96,17 @@
             />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="No location info"
+        android:fontFamily="monaco"
+        android:textSize="20sp"
+        android:textColor="#212121"
+        android:layout_marginTop="20dp"
+        />
 
     <TextView
         android:id="@+id/text_comment"

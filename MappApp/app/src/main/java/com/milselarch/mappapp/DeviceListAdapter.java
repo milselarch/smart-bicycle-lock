@@ -25,6 +25,8 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.location.LocationServices;
+
 /**
  * Device list adapter.
  *
